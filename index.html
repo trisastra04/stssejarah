@@ -1,0 +1,61 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scan Absensi Salat Siswa</title>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+  <h2>Scan QR Absensi Salat Siswa</h2>
+
+  <label for="salat">Pilih Jenis Salat:</label>
+  <select id="salat">
+    <option value="Subuh">Subuh</option>
+    <option value="Dzuhur">Dzuhur</option>
+    <option value="Ashar">Ashar</option>
+    <option value="Maghrib">Maghrib</option>
+    <option value="Isya">Isya</option>
+  </select>
+
+  <div id="reader" style="width:300px; margin-top:20px;"></div>
+  <p id="status" style="margin-top:15px; font-weight:bold;"></p>
+
+  <script>
+    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxixamCE9ycghioQlUDwPO4gGooULM8DuKKbs-DvcBZsMAFF8MAVMeoPwMLwP4pxfEcJQ/exec";
+
+    function onScanSuccess(decodedText) {
+      const salat = document.getElementById("salat").value;
+      const nama = decodedText;
+
+      fetch(URL_SCRIPT, {
+        method: "POST",
+        body: JSON.stringify({
+          nama: nama,
+          salat: salat,
+          keterangan: "Hadir"
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(response => response.text())
+      .then(result => {
+        document.getElementById("status").innerText = `✅ Disimpan: ${nama} - ${salat}`;
+      })
+      .catch(error => {
+        document.getElementById("status").innerText = `❌ Gagal menyimpan data`;
+        console.error("Error:", error);
+      });
+
+      html5QrcodeScanner.clear();
+    }
+
+    const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+      fps: 10,
+      qrbox: 250
+    });
+
+    html5QrcodeScanner.render(onScanSuccess);
+  </script>
+</body>
+</html>
