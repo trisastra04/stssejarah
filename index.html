@@ -1,61 +1,498 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-  <title>Scan Absensi Salat Siswa</title>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-</head>
-<body>
-  <h2>Scan QR Absensi Salat Siswa</h2>
-
-  <label for="salat">Pilih Jenis Salat:</label>
-  <select id="salat">
-    <option value="Subuh">Subuh</option>
-    <option value="Dzuhur">Dzuhur</option>
-    <option value="Ashar">Ashar</option>
-    <option value="Maghrib">Maghrib</option>
-    <option value="Isya">Isya</option>
-  </select>
-
-  <div id="reader" style="width:300px; margin-top:20px;"></div>
-  <p id="status" style="margin-top:15px; font-weight:bold;"></p>
-
-  <script>
-    const URL_SCRIPT = "https://script.google.com/macros/s/AKfycbxixamCE9ycghioQlUDwPO4gGooULM8DuKKbs-DvcBZsMAFF8MAVMeoPwMLwP4pxfEcJQ/exec";
-
-    function onScanSuccess(decodedText) {
-      const salat = document.getElementById("salat").value;
-      const nama = decodedText;
-
-      fetch(URL_SCRIPT, {
-        method: "POST",
-        body: JSON.stringify({
-          nama: nama,
-          salat: salat,
-          keterangan: "Hadir"
-        }),
-        headers: {
-          "Content-Type": "application/json"
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Ulangan Sejarah</title>
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .selected-answer {
+            background-color: #4f46e5 !important;
+            color: white !important;
+            border-color: #4f46e5 !important;
         }
-      })
-      .then(response => response.text())
-      .then(result => {
-        document.getElementById("status").innerText = `✅ Disimpan: ${nama} - ${salat}`;
-      })
-      .catch(error => {
-        document.getElementById("status").innerText = `❌ Gagal menyimpan data`;
-        console.error("Error:", error);
-      });
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
 
-      html5QrcodeScanner.clear();
-    }
+    <div id="app-container" class="bg-white w-full max-w-2xl rounded-2xl shadow-lg p-6 md:p-8 transition-all duration-300">
 
-    const html5QrcodeScanner = new Html5QrcodeScanner("reader", {
-      fps: 10,
-      qrbox: 250
-    });
+        <!-- Tampilan Login -->
+        <div id="login-screen">
+            <h1 class="text-3xl font-bold text-slate-800 text-center">Login Peserta Ulangan</h1>
+            <p class="text-slate-600 text-center mt-4">Silakan pilih kelas dan masukkan kode akses untuk melanjutkan.</p>
+            
+            <div class="mt-8 space-y-4 max-w-md mx-auto">
+                <div>
+                    <label for="class-dropdown" class="block text-sm font-medium text-slate-700">Pilih Kelas</label>
+                    <select id="class-dropdown" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-3 bg-slate-50">
+                        <option value="">Memuat kelas...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="access-code-input" class="block text-sm font-medium text-slate-700">Kode Akses</label>
+                    <input type="password" id="access-code-input" placeholder="Masukkan kode akses" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-3">
+                </div>
+                 <div id="name-container" class="hidden">
+                    <label for="name-dropdown" class="block text-sm font-medium text-slate-700">Pilih Nama Anda</label>
+                    <select id="name-dropdown" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 p-3 bg-slate-50">
+                        <option value="">Pilih Nama</option>
+                    </select>
+                </div>
+            </div>
 
-    html5QrcodeScanner.render(onScanSuccess);
-  </script>
+            <div class="max-w-md mx-auto">
+                <button id="start-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 mt-8 text-lg disabled:bg-slate-400 disabled:cursor-not-allowed">
+                    Mulai Ulangan
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tampilan Loading Soal -->
+        <div id="loading-screen" class="hidden text-center py-10">
+            <p class="text-slate-600">Memuat soal...</p>
+        </div>
+
+        <!-- Tampilan Kuis -->
+        <div id="quiz-screen" class="hidden">
+            <!-- PENAMBAHAN IDENTITAS SISWA -->
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-slate-800">Soal Ulangan</h2>
+                    <div class="mt-2 text-sm text-slate-600 border-l-4 border-indigo-200 pl-3">
+                        <p><span class="font-semibold">Nama:</span> <span id="student-name-display"></span></p>
+                        <p><span class="font-semibold">Kelas:</span> <span id="student-class-display"></span></p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="timer-display" class="text-red-700 font-semibold bg-red-100 py-1 px-3 rounded-lg">--:--</span>
+                    <span id="question-counter" class="text-slate-500 font-semibold bg-slate-100 py-1 px-3 rounded-lg"></span>
+                </div>
+            </div>
+            <!-- AKHIR PENAMBAHAN IDENTITAS SISWA -->
+            <p id="question-text" class="text-lg text-slate-700 mb-6 min-h-[60px] whitespace-pre-wrap"></p>
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="mt-8 flex justify-end">
+                <button id="next-button" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-indigo-700 transition-colors duration-300 disabled:bg-slate-300 disabled:cursor-not-allowed">
+                    Selanjutnya
+                </button>
+            </div>
+        </div>
+
+        <!-- Tampilan Hasil -->
+        <div id="result-screen" class="hidden text-center">
+            <h1 class="text-3xl font-bold text-slate-800">Ulangan Selesai!</h1>
+            <p class="text-xl text-slate-600 mt-4">Skor Akhir Anda:</p>
+            <p id="score-text" class="text-6xl font-bold text-indigo-600 my-4"></p>
+            <p id="score-details" class="text-slate-600 mb-8"></p>
+            
+            <div id="submission-form" class="mt-6 border-t pt-6">
+                 <div class="bg-slate-100 p-3 rounded-lg max-w-md mx-auto text-left">
+                    <p class="text-sm text-slate-500">Nama Peserta:</p>
+                    <p id="final-name" class="font-semibold text-slate-800"></p>
+                    <p class="text-sm text-slate-500 mt-2">Kelas:</p>
+                    <p id="final-class" class="font-semibold text-slate-800"></p>
+                </div>
+                <button id="submit-button" class="w-full max-w-xs mx-auto bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors duration-300 mt-6 text-lg">
+                    Simpan Skor
+                </button>
+                <p id="submit-status" class="text-sm text-slate-500 mt-2 h-5"></p>
+            </div>
+            
+            <button id="retry-button" class="w-full max-w-xs mx-auto bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 text-lg mt-8">
+                Kerjakan Lagi
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- PENGATURAN ---
+        const QUIZ_DURATION_MINUTES = 45; // Durasi kuis dalam menit
+
+        // --- PENGATURAN BANK SOAL BERDASARKAN KELAS ---
+        const quizURLs = {
+            'Kelas X': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=427248072&single=true&output=csv',
+            'Kelas XI': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=0&single=true&output=csv',
+            'Kelas XII': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=1252248885&single=true&output=csv',
+        };
+
+        const studentSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=463026985&single=true&output=csv';
+        const accessCodeSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=361839719&single=true&output=csv';
+        const webAppURL = 'https://script.google.com/macros/s/AKfycbzm5BUSdc8y8IKGDpMMnrHA6qIrkAOrkMFjZepcxlwhMmg5lhmtSJz0MKu1k1t9JLe-/exec';
+        
+        // --- ELEMEN DOM ---
+        const loginScreen = document.getElementById('login-screen');
+        const classDropdown = document.getElementById('class-dropdown');
+        const accessCodeInput = document.getElementById('access-code-input');
+        const nameContainer = document.getElementById('name-container');
+        const nameDropdown = document.getElementById('name-dropdown');
+        const loadingScreen = document.getElementById('loading-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startButton = document.getElementById('start-button');
+        const nextButton = document.getElementById('next-button');
+        const retryButton = document.getElementById('retry-button');
+        const questionCounter = document.getElementById('question-counter');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const timerDisplay = document.getElementById('timer-display');
+        const scoreText = document.getElementById('score-text');
+        const scoreDetails = document.getElementById('score-details');
+        const finalName = document.getElementById('final-name');
+        const finalClass = document.getElementById('final-class');
+        const submitButton = document.getElementById('submit-button');
+        const submitStatus = document.getElementById('submit-status');
+        const submissionForm = document.getElementById('submission-form');
+        // PENAMBAHAN ELEMEN DOM UNTUK IDENTITAS SISWA
+        const studentNameDisplay = document.getElementById('student-name-display');
+        const studentClassDisplay = document.getElementById('student-class-display');
+
+
+        // --- STATE APLIKASI ---
+        let quizData = [];
+        let studentData = {};
+        let accessCodeData = {};
+        let selectedClass = '';
+        let selectedName = '';
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedAnswer = null;
+        let answeredQuestionsLog = [];
+        let timerInterval = null;
+        let timeLeft = 0;
+
+        // --- FUNGSI-FUNGSI ---
+        
+        function parseCSV(csvText) {
+            const rows = [];
+            let inQuotes = false;
+            let currentField = '';
+            let currentRow = [];
+            csvText = csvText.trim();
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+                if (inQuotes) {
+                    if (char === '"' && nextChar === '"') {
+                        currentField += '"'; i++;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        currentField += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        currentRow.push(currentField.trim()); currentField = '';
+                    } else if (char === '\n' || char === '\r') {
+                        currentRow.push(currentField.trim());
+                        rows.push(currentRow);
+                        currentRow = []; currentField = '';
+                        if (char === '\r' && nextChar === '\n') { i++; }
+                    } else {
+                        currentField += char;
+                    }
+                }
+            }
+            if (currentField || currentRow.length > 0) {
+                 currentRow.push(currentField.trim());
+                 rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        async function fetchStudentData() {
+            try {
+                const response = await fetch(studentSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat data siswa.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows.shift();
+                studentData = {};
+                headers.forEach(header => { studentData[header] = []; });
+                rows.forEach(row => {
+                    row.forEach((name, index) => { if (name && headers[index]) { studentData[headers[index]].push(name); } });
+                });
+                return headers;
+            } catch (error) { console.error(error); return null; }
+        }
+        
+        async function fetchAccessCodes() {
+            try {
+                const response = await fetch(accessCodeSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat data kode akses.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows[0];
+                const codeRow = rows[1];
+                accessCodeData = {};
+                headers.forEach((className, index) => { if (codeRow[index]) { accessCodeData[className] = codeRow[index]; } });
+            } catch (error) { console.error(error); }
+        }
+
+        function populateClassDropdown(classes) {
+            classDropdown.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            classes.forEach(className => {
+                if (className) {
+                    const option = document.createElement('option');
+                    option.value = className; option.textContent = className;
+                    classDropdown.appendChild(option);
+                }
+            });
+        }
+        
+        function checkLoginConditions() {
+            const code = accessCodeInput.value.trim();
+            const className = classDropdown.value;
+            const correctCodeForClass = accessCodeData[className];
+
+            if (className && code && code === correctCodeForClass) {
+                nameContainer.classList.remove('hidden'); populateNameDropdown(className);
+            } else {
+                nameContainer.classList.add('hidden'); nameDropdown.innerHTML = '';
+            }
+            checkStartButton();
+        }
+        
+        function populateNameDropdown(className) {
+            nameDropdown.innerHTML = '<option value="">-- Pilih Nama --</option>';
+            studentData[className].forEach(name => {
+                const option = document.createElement('option');
+                option.value = name; option.textContent = name;
+                nameDropdown.appendChild(option);
+            });
+        }
+        
+        function checkStartButton(){
+            const className = classDropdown.value;
+            const name = nameDropdown.value;
+            const code = accessCodeInput.value.trim();
+            const correctCodeForClass = accessCodeData[className];
+            startButton.disabled = !(className && name && code === correctCodeForClass);
+        }
+
+        async function fetchQuizData(quizSheetURL) {
+            try {
+                const response = await fetch(quizSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat soal dari Google Sheet.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows.shift(); 
+                const colMap = {
+                    soal: headers.indexOf('Soal'), opsiA: headers.indexOf('Opsi A'), opsiB: headers.indexOf('Opsi B'),
+                    opsiC: headers.indexOf('Opsi C'), opsiD: headers.indexOf('Opsi D'), opsiE: headers.indexOf('Opsi E'),
+                    kunci: headers.indexOf('Kunci Jawaban')
+                };
+
+                if (colMap.kunci === -1) throw new Error("Format kolom 'Kunci Jawaban' salah.");
+                
+                quizData = [];
+                rows.forEach((columns) => {
+                    const question = columns[colMap.soal];
+                    const options = [columns[colMap.opsiA], columns[colMap.opsiB], columns[colMap.opsiC], columns[colMap.opsiD], columns[colMap.opsiE]].filter(opt => opt && opt.trim() !== '');
+                    const key = columns[colMap.kunci]?.toUpperCase().trim();
+                    let answer = '';
+                    if (key === 'A') answer = columns[colMap.opsiA]; else if (key === 'B') answer = columns[colMap.opsiB];
+                    else if (key === 'C') answer = columns[colMap.opsiC]; else if (key === 'D') answer = columns[colMap.opsiD];
+                    else if (key === 'E') answer = columns[colMap.opsiE];
+                    if (question && options.length > 1 && answer) {
+                        quizData.push({ question, options, answer });
+                    }
+                });
+
+                if (quizData.length === 0) throw new Error("Tidak ada soal yang berhasil dimuat.");
+                return true;
+            } catch (error) {
+                alert(`Terjadi Kesalahan: ${error.message}`);
+                return false;
+            }
+        }
+        
+        function startTimer() {
+            timeLeft = QUIZ_DURATION_MINUTES * 60;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showResults();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            if (timeLeft <= 60 && timeLeft > 0) {
+                timerDisplay.classList.add('animate-pulse');
+            } else {
+                timerDisplay.classList.remove('animate-pulse');
+            }
+        }
+        
+        function handleVisibilityChange() {
+            if (document.hidden && !quizScreen.classList.contains('hidden')) {
+                showResults(true);
+            }
+        }
+
+        async function startQuiz() {
+            selectedClass = classDropdown.value; 
+            selectedName = nameDropdown.value;
+
+            // PENAMBAHAN: Mengisi identitas siswa di layar kuis
+            studentNameDisplay.textContent = selectedName;
+            studentClassDisplay.textContent = selectedClass;
+
+            let quizSheetURL = '';
+            if (selectedClass.startsWith('Kelas XII')) quizSheetURL = quizURLs['Kelas XII'];
+            else if (selectedClass.startsWith('Kelas XI')) quizSheetURL = quizURLs['Kelas XI'];
+            else if (selectedClass.startsWith('Kelas X')) quizSheetURL = quizURLs['Kelas X'];
+
+            if (!quizSheetURL) {
+                alert(`Bank soal untuk tingkat ${selectedClass} tidak ditemukan.`);
+                return;
+            }
+
+            loginScreen.classList.add('hidden'); 
+            resultScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden'); 
+            submissionForm.style.display = 'block';
+            submitStatus.textContent = '';
+            
+            const success = await fetchQuizData(quizSheetURL);
+            loadingScreen.classList.add('hidden');
+            if (!success) { 
+                loginScreen.classList.remove('hidden'); 
+                return; 
+            }
+            
+            currentQuestionIndex = 0; score = 0; selectedAnswer = null; answeredQuestionsLog = [];
+            quizScreen.classList.remove('hidden');
+            loadQuestion();
+            startTimer();
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+        
+        function loadQuestion() {
+            selectedAnswer = null; optionsContainer.innerHTML = ''; nextButton.disabled = true;
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionCounter.textContent = `Soal ${currentQuestionIndex + 1} dari ${quizData.length}`;
+            questionText.textContent = currentQuestion.question;
+            const shuffledOptions = [...currentQuestion.options].sort(() => Math.random() - 0.5);
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('w-full', 'p-4', 'border-2', 'border-slate-300', 'rounded-lg', 'text-left', 'hover:bg-indigo-100', 'hover:border-indigo-400', 'transition-colors', 'duration-200');
+                button.addEventListener('click', () => selectAnswer(option, button));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function selectAnswer(option, buttonElement) {
+            selectedAnswer = option;
+            document.querySelectorAll('#options-container button').forEach(btn => btn.classList.remove('selected-answer'));
+            buttonElement.classList.add('selected-answer');
+            nextButton.disabled = false;
+        }
+        
+        function resetToLogin() {
+            if (timerInterval) clearInterval(timerInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            
+            quizScreen.classList.add('hidden'); resultScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+            accessCodeInput.value = ''; nameContainer.classList.add('hidden');
+            nameDropdown.innerHTML = ''; classDropdown.selectedIndex = 0;
+            checkStartButton();
+        }
+
+        function showResults(forceEnd = false) {
+            if (timerInterval) clearInterval(timerInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+            quizScreen.classList.add('hidden'); 
+            resultScreen.classList.remove('hidden');
+            
+            const resultTitle = resultScreen.querySelector('h1');
+
+            if (forceEnd) {
+                resultTitle.textContent = 'Ulangan Dihentikan!';
+                resultTitle.classList.add('text-red-600');
+                scoreDetails.textContent = `Anda telah meninggalkan halaman ulangan. Sesuai peraturan, ulangan dianggap selesai.`;
+            } else {
+                resultTitle.textContent = 'Ulangan Selesai!';
+                resultTitle.classList.remove('text-red-600');
+                scoreDetails.textContent = `Anda berhasil menjawab benar ${score} dari ${quizData.length} soal.`;
+            }
+
+            const finalScore = quizData.length > 0 ? Math.round((100 / quizData.length) * score) : 0;
+            scoreText.textContent = finalScore;
+            finalName.textContent = selectedName;
+            finalClass.textContent = selectedClass;
+        }
+
+        function handleNextQuestion() {
+            const isCorrect = selectedAnswer === quizData[currentQuestionIndex].answer;
+            answeredQuestionsLog.push({ questionNumber: currentQuestionIndex + 1, answer: selectedAnswer, correct: isCorrect });
+            if (isCorrect) { score++; }
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) { loadQuestion(); } 
+            else { showResults(); }
+        }
+        
+        async function submitScore() {
+            submitButton.disabled = true; submitStatus.textContent = 'Mengirim...';
+            const formattedLog = answeredQuestionsLog.map(log => `Soal ${log.questionNumber}: "${log.answer}" (${log.correct ? 'Benar' : 'Salah'})`).join('; ');
+            const finalScore = quizData.length > 0 ? Math.round((100 / quizData.length) * score) : 0;
+            const data = {
+                nama: selectedName, kelas: selectedClass, jawabanBenar: score, totalSoal: quizData.length,
+                nomorSoalDikerjakan: formattedLog, 
+                skor: finalScore
+            };
+            try {
+                await fetch(webAppURL, {
+                    method: 'POST', mode: 'no-cors', cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data), redirect: 'follow'
+                });
+                submitStatus.textContent = 'Skor berhasil disimpan!';
+                submitStatus.style.color = 'green';
+                submissionForm.style.display = 'none';
+            } catch (error) {
+                submitStatus.textContent = 'Gagal mengirim. Coba lagi.';
+                submitStatus.style.color = 'red';
+                submitButton.disabled = false;
+            }
+        }
+
+        // --- INISIALISASI & EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            startButton.disabled = true;
+            await fetchAccessCodes();
+            const classes = await fetchStudentData();
+            if (classes) { populateClassDropdown(classes); }
+        });
+        
+        classDropdown.addEventListener('change', checkLoginConditions);
+        accessCodeInput.addEventListener('input', checkLoginConditions);
+        nameDropdown.addEventListener('change', checkStartButton);
+        startButton.addEventListener('click', startQuiz);
+        nextButton.addEventListener('click', handleNextQuestion);
+        retryButton.addEventListener('click', resetToLogin);
+        submitButton.addEventListener('click', submitScore);
+
+    </script>
 </body>
 </html>
+
