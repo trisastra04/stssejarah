@@ -25,7 +25,7 @@
 
         <!-- Tampilan Login -->
         <div id="login-screen">
-            <h1 class="text-3xl font-bold text-slate-800 text-center">Login Peserta Ulangan</h1>
+            <h1 class="text-3xl font-bold text-slate-800 text-center">Login Murid</h1>
             <p class="text-slate-600 text-center mt-4">Silakan pilih kelas dan masukkan kode akses untuk melanjutkan.</p>
             
             <div class="mt-8 space-y-4 max-w-md mx-auto">
@@ -150,7 +150,6 @@
         const submitButton = document.getElementById('submit-button');
         const submitStatus = document.getElementById('submit-status');
         const submissionForm = document.getElementById('submission-form');
-        // PENAMBAHAN ELEMEN DOM UNTUK IDENTITAS SISWA
         const studentNameDisplay = document.getElementById('student-name-display');
         const studentClassDisplay = document.getElementById('student-class-display');
 
@@ -295,7 +294,7 @@
                 if (colMap.kunci === -1) throw new Error("Format kolom 'Kunci Jawaban' salah.");
                 
                 quizData = [];
-                rows.forEach((columns) => {
+                rows.forEach((columns, index) => { // Tambahkan index untuk nomor soal asli
                     const question = columns[colMap.soal];
                     const options = [columns[colMap.opsiA], columns[colMap.opsiB], columns[colMap.opsiC], columns[colMap.opsiD], columns[colMap.opsiE]].filter(opt => opt && opt.trim() !== '');
                     const key = columns[colMap.kunci]?.toUpperCase().trim();
@@ -304,7 +303,7 @@
                     else if (key === 'C') answer = columns[colMap.opsiC]; else if (key === 'D') answer = columns[colMap.opsiD];
                     else if (key === 'E') answer = columns[colMap.opsiE];
                     if (question && options.length > 1 && answer) {
-                        quizData.push({ question, options, answer });
+                        quizData.push({ question, options, answer, originalIndex: index + 1 }); // Simpan nomor soal asli
                     }
                 });
 
@@ -350,7 +349,6 @@
             selectedClass = classDropdown.value; 
             selectedName = nameDropdown.value;
 
-            // PENAMBAHAN: Mengisi identitas siswa di layar kuis
             studentNameDisplay.textContent = selectedName;
             studentClassDisplay.textContent = selectedClass;
 
@@ -376,6 +374,10 @@
                 loginScreen.classList.remove('hidden'); 
                 return; 
             }
+            
+            // --- PENAMBAHAN: Mengacak urutan soal ---
+            quizData.sort(() => Math.random() - 0.5);
+            // --- AKHIR PENAMBAHAN ---
             
             currentQuestionIndex = 0; score = 0; selectedAnswer = null; answeredQuestionsLog = [];
             quizScreen.classList.remove('hidden');
@@ -443,8 +445,13 @@
         }
 
         function handleNextQuestion() {
-            const isCorrect = selectedAnswer === quizData[currentQuestionIndex].answer;
-            answeredQuestionsLog.push({ questionNumber: currentQuestionIndex + 1, answer: selectedAnswer, correct: isCorrect });
+            const currentQuestion = quizData[currentQuestionIndex];
+            const isCorrect = selectedAnswer === currentQuestion.answer;
+            answeredQuestionsLog.push({ 
+                questionNumber: currentQuestion.originalIndex, // Gunakan nomor soal asli untuk log
+                answer: selectedAnswer, 
+                correct: isCorrect 
+            });
             if (isCorrect) { score++; }
             currentQuestionIndex++;
             if (currentQuestionIndex < quizData.length) { loadQuestion(); } 
@@ -453,7 +460,12 @@
         
         async function submitScore() {
             submitButton.disabled = true; submitStatus.textContent = 'Mengirim...';
-            const formattedLog = answeredQuestionsLog.map(log => `Soal ${log.questionNumber}: "${log.answer}" (${log.correct ? 'Benar' : 'Salah'})`).join('; ');
+            
+            // --- PENAMBAHAN: Mengurutkan log jawaban sebelum dikirim ---
+            const sortedLog = [...answeredQuestionsLog].sort((a, b) => a.questionNumber - b.questionNumber);
+            // --- AKHIR PENAMBAHAN ---
+
+            const formattedLog = sortedLog.map(log => `Soal ${log.questionNumber}: "${log.answer}" (${log.correct ? 'Benar' : 'Salah'})`).join('; ');
             const finalScore = quizData.length > 0 ? Math.round((100 / quizData.length) * score) : 0;
             const data = {
                 nama: selectedName, kelas: selectedClass, jawabanBenar: score, totalSoal: quizData.length,
