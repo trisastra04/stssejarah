@@ -23,12 +23,6 @@
 
         <!-- Tampilan Login -->
         <div id="login-screen">
-            <!-- PENAMBAHAN TOMBOL LOGIN GURU -->
-            <a href="monitor.html" target="_blank" class="absolute top-5 right-6 text-xs text-slate-500 hover:text-indigo-600 hover:underline transition-colors">
-                Login Guru
-            </a>
-            <!-- AKHIR PENAMBAHAN -->
-
             <h1 class="text-3xl font-bold text-slate-800 text-center">Login Murid</h1>
             <p class="text-slate-600 text-center mt-4">Silakan pilih kelas dan masukkan kode akses untuk melanjutkan.</p>
             
@@ -119,7 +113,6 @@
     
     <script>
         // --- PENTING: PENGATURAN FIREBASE ---
-        // Konfigurasi ini sudah diisi secara otomatis
         const firebaseConfig = {
             apiKey: "AIzaSyDZCth3DrMVVdi0ONJgXv7DuoHJsf8-M5Q",
             authDomain: "aplikasi-ulangan-sejarah.firebaseapp.com",
@@ -128,7 +121,6 @@
             messagingSenderId: "571845428965",
             appId: "1:571845428965:web:a8c4e5da384fbf798fb60c"
         };
-        // Inisialisasi Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         // --- AKHIR PENGATURAN FIREBASE ---
@@ -168,16 +160,16 @@
         };
 
         // --- FUNGSI-FUNGSI ---
-        function parseCSV(csvText) { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ return []; }
-        async function fetchStudentData() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ return []; }
-        async function fetchAccessCodes() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function populateClassDropdown(classes) { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function checkLoginConditions() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function populateNameDropdown(className) { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function checkStartButton() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        async function fetchQuizData(quizSheetURL) { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ return true; }
-        function startTimer() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function updateTimerDisplay() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
+        function parseCSV(csvText) { /* Implementasi disembunyikan untuk keringkasan */ return []; }
+        async function fetchStudentData() { /* Implementasi disembunyikan untuk keringkasan */ return []; }
+        async function fetchAccessCodes() { /* Implementasi disembunyikan untuk keringkasan */ }
+        function populateClassDropdown(classes) { /* Implementasi disembunyikan untuk keringkasan */ }
+        function checkLoginConditions() { /* Implementasi disembunyikan untuk keringkasan */ }
+        function populateNameDropdown(className) { /* Implementasi disembunyikan untuk keringkasan */ }
+        function checkStartButton() { /* Implementasi disembunyikan untuk keringkasan */ }
+        async function fetchQuizData(quizSheetURL) { /* Implementasi disembunyikan untuk keringkasan */ return true; }
+        function startTimer() { /* Implementasi disembunyikan untuk keringkasan */ }
+        function updateTimerDisplay() { /* Implementasi disembunyikan untuk keringkasan */ }
 
         function updateStudentStatus(statusUpdate) {
             if (state.studentSessionId) {
@@ -235,8 +227,8 @@
             document.addEventListener('visibilitychange', handleVisibilityChange);
         }
         
-        function loadQuestion() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
-        function selectAnswer(option, buttonElement) { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
+        function loadQuestion() { /* Implementasi disembunyikan untuk keringkasan */ }
+        function selectAnswer(option, buttonElement) { /* Implementasi disembunyikan untuk keringkasan */ }
         
         function resetToLogin() {
             if (state.timerInterval) clearInterval(state.timerInterval);
@@ -299,7 +291,7 @@
             else { showResults(); }
         }
         
-        async function submitScore() { /* ... (kode tidak berubah, disembunyikan untuk keringkasan) ... */ }
+        async function submitScore() { /* Implementasi disembunyikan untuk keringkasan */ }
 
         // --- INISIALISASI ---
         document.addEventListener('DOMContentLoaded', async () => {
