@@ -107,12 +107,12 @@
         </div>
     </div>
     
-    <!-- PENAMBAHAN: Firebase SDK -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     
     <script>
-        // --- PENTING: PENGATURAN FIREBASE ---
+        // --- PENGATURAN FIREBASE ---
         const firebaseConfig = {
             apiKey: "AIzaSyDZCth3DrMVVdi0ONJgXv7DuoHJsf8-M5Q",
             authDomain: "aplikasi-ulangan-sejarah.firebaseapp.com",
@@ -160,17 +160,179 @@
         };
 
         // --- FUNGSI-FUNGSI ---
-        function parseCSV(csvText) { /* Implementasi disembunyikan untuk keringkasan */ return []; }
-        async function fetchStudentData() { /* Implementasi disembunyikan untuk keringkasan */ return []; }
-        async function fetchAccessCodes() { /* Implementasi disembunyikan untuk keringkasan */ }
-        function populateClassDropdown(classes) { /* Implementasi disembunyikan untuk keringkasan */ }
-        function checkLoginConditions() { /* Implementasi disembunyikan untuk keringkasan */ }
-        function populateNameDropdown(className) { /* Implementasi disembunyikan untuk keringkasan */ }
-        function checkStartButton() { /* Implementasi disembunyikan untuk keringkasan */ }
-        async function fetchQuizData(quizSheetURL) { /* Implementasi disembunyikan untuk keringkasan */ return true; }
-        function startTimer() { /* Implementasi disembunyikan untuk keringkasan */ }
-        function updateTimerDisplay() { /* Implementasi disembunyikan untuk keringkasan */ }
+        function parseCSV(csvText) {
+            const rows = [];
+            let inQuotes = false;
+            let currentField = '';
+            let currentRow = [];
+            csvText = csvText.trim();
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+                if (inQuotes) {
+                    if (char === '"' && nextChar === '"') {
+                        currentField += '"'; i++;
+                    } else if (char === '"') {
+                        inQuotes = false;
+                    } else {
+                        currentField += char;
+                    }
+                } else {
+                    if (char === '"') {
+                        inQuotes = true;
+                    } else if (char === ',') {
+                        currentRow.push(currentField.trim()); currentField = '';
+                    } else if (char === '\n' || char === '\r') {
+                        currentRow.push(currentField.trim());
+                        rows.push(currentRow);
+                        currentRow = []; currentField = '';
+                        if (char === '\r' && nextChar === '\n') { i++; }
+                    } else {
+                        currentField += char;
+                    }
+                }
+            }
+            if (currentField || currentRow.length > 0) {
+                 currentRow.push(currentField.trim());
+                 rows.push(currentRow);
+            }
+            return rows;
+        }
 
+        async function fetchStudentData() {
+            try {
+                const response = await fetch(studentSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat data siswa.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows.shift();
+                state.studentData = {};
+                headers.forEach(header => { state.studentData[header] = []; });
+                rows.forEach(row => {
+                    row.forEach((name, index) => { if (name && headers[index]) { state.studentData[headers[index]].push(name); } });
+                });
+                return headers;
+            } catch (error) { 
+                console.error("Kesalahan fetchStudentData:", error);
+                return null;
+            }
+        }
+        
+        async function fetchAccessCodes() {
+            try {
+                const response = await fetch(accessCodeSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat data kode akses.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows[0];
+                const codeRow = rows[1];
+                state.accessCodeData = {};
+                headers.forEach((className, index) => { if (codeRow[index]) { state.accessCodeData[className] = codeRow[index]; } });
+            } catch (error) { console.error(error); }
+        }
+
+        function populateClassDropdown(classes) {
+            allElements.classDropdown.innerHTML = '<option value="">-- Pilih Kelas --</option>';
+            classes.forEach(className => {
+                if (className) {
+                    const option = document.createElement('option');
+                    option.value = className; option.textContent = className;
+                    allElements.classDropdown.appendChild(option);
+                }
+            });
+        }
+        
+        function checkLoginConditions() {
+            const code = allElements.accessCodeInput.value.trim();
+            const className = allElements.classDropdown.value;
+            const correctCodeForClass = state.accessCodeData[className];
+
+            if (className && code && code === correctCodeForClass) {
+                allElements.nameContainer.classList.remove('hidden'); populateNameDropdown(className);
+            } else {
+                allElements.nameContainer.classList.add('hidden'); allElements.nameDropdown.innerHTML = '';
+            }
+            checkStartButton();
+        }
+        
+        function populateNameDropdown(className) {
+            allElements.nameDropdown.innerHTML = '<option value="">-- Pilih Nama --</option>';
+            state.studentData[className].forEach(name => {
+                const option = document.createElement('option');
+                option.value = name; option.textContent = name;
+                allElements.nameDropdown.appendChild(option);
+            });
+        }
+        
+        function checkStartButton(){
+            const className = allElements.classDropdown.value;
+            const name = allElements.nameDropdown.value;
+            const code = allElements.accessCodeInput.value.trim();
+            const correctCodeForClass = state.accessCodeData[className];
+            allElements.startButton.disabled = !(className && name && code === correctCodeForClass);
+        }
+
+        async function fetchQuizData(quizSheetURL) {
+            try {
+                const response = await fetch(quizSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat soal dari Google Sheet.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                const headers = rows.shift(); 
+                const colMap = {
+                    soal: headers.indexOf('Soal'), opsiA: headers.indexOf('Opsi A'), opsiB: headers.indexOf('Opsi B'),
+                    opsiC: headers.indexOf('Opsi C'), opsiD: headers.indexOf('Opsi D'), opsiE: headers.indexOf('Opsi E'),
+                    kunci: headers.indexOf('Kunci Jawaban')
+                };
+
+                if (colMap.kunci === -1) throw new Error("Format kolom 'Kunci Jawaban' salah.");
+                
+                state.quizData = [];
+                rows.forEach((columns, index) => {
+                    const question = columns[colMap.soal];
+                    const options = [columns[colMap.opsiA], columns[colMap.opsiB], columns[colMap.opsiC], columns[colMap.opsiD], columns[colMap.opsiE]].filter(opt => opt && opt.trim() !== '');
+                    const key = columns[colMap.kunci]?.toUpperCase().trim();
+                    let answer = '';
+                    if (key === 'A') answer = columns[colMap.opsiA]; else if (key === 'B') answer = columns[colMap.opsiB];
+                    else if (key === 'C') answer = columns[colMap.opsiC]; else if (key === 'D') answer = columns[colMap.opsiD];
+                    else if (key === 'E') answer = columns[colMap.opsiE];
+                    if (question && options.length > 1 && answer) {
+                        state.quizData.push({ question, options, answer, originalIndex: index + 1 });
+                    }
+                });
+
+                if (state.quizData.length === 0) throw new Error("Tidak ada soal yang berhasil dimuat.");
+                return true;
+            } catch (error) {
+                alert(`Terjadi Kesalahan: ${error.message}`);
+                return false;
+            }
+        }
+        
+        function startTimer() {
+            state.timeLeft = QUIZ_DURATION_MINUTES * 60;
+            updateTimerDisplay();
+            state.timerInterval = setInterval(() => {
+                state.timeLeft--;
+                updateTimerDisplay();
+                if (state.timeLeft <= 0) {
+                    clearInterval(state.timerInterval);
+                    showResults();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(state.timeLeft / 60);
+            const seconds = state.timeLeft % 60;
+            allElements.timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            if (state.timeLeft <= 60 && state.timeLeft > 0) {
+                allElements.timerDisplay.classList.add('animate-pulse');
+            } else {
+                allElements.timerDisplay.classList.remove('animate-pulse');
+            }
+        }
+        
         function updateStudentStatus(statusUpdate) {
             if (state.studentSessionId) {
                 db.collection("exam_sessions").doc(state.studentSessionId).update(statusUpdate)
@@ -227,8 +389,27 @@
             document.addEventListener('visibilitychange', handleVisibilityChange);
         }
         
-        function loadQuestion() { /* Implementasi disembunyikan untuk keringkasan */ }
-        function selectAnswer(option, buttonElement) { /* Implementasi disembunyikan untuk keringkasan */ }
+        function loadQuestion() {
+            state.selectedAnswer = null; allElements.optionsContainer.innerHTML = ''; allElements.nextButton.disabled = true;
+            const currentQuestion = state.quizData[state.currentQuestionIndex];
+            allElements.questionCounter.textContent = `Soal ${state.currentQuestionIndex + 1} dari ${state.quizData.length}`;
+            allElements.questionText.textContent = currentQuestion.question;
+            const shuffledOptions = [...currentQuestion.options].sort(() => Math.random() - 0.5);
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.classList.add('w-full', 'p-4', 'border-2', 'border-slate-300', 'rounded-lg', 'text-left', 'hover:bg-indigo-100', 'hover:border-indigo-400', 'transition-colors', 'duration-200');
+                button.addEventListener('click', () => selectAnswer(option, button));
+                allElements.optionsContainer.appendChild(button);
+            });
+        }
+
+        function selectAnswer(option, buttonElement) {
+            state.selectedAnswer = option;
+            document.querySelectorAll('#options-container button').forEach(btn => btn.classList.remove('selected-answer'));
+            buttonElement.classList.add('selected-answer');
+            allElements.nextButton.disabled = false;
+        }
         
         function resetToLogin() {
             if (state.timerInterval) clearInterval(state.timerInterval);
@@ -291,7 +472,32 @@
             else { showResults(); }
         }
         
-        async function submitScore() { /* Implementasi disembunyikan untuk keringkasan */ }
+        async function submitScore() {
+            allElements.submitButton.disabled = true; allElements.submitStatus.textContent = 'Mengirim...';
+            
+            const sortedLog = [...state.answeredQuestionsLog].sort((a, b) => a.questionNumber - b.questionNumber);
+            const formattedLog = sortedLog.map(log => `Soal ${log.questionNumber}: "${log.answer}" (${log.correct ? 'Benar' : 'Salah'})`).join('; ');
+            const finalScore = state.quizData.length > 0 ? Math.round((100 / state.quizData.length) * state.score) : 0;
+            const data = {
+                nama: state.selectedName, kelas: state.selectedClass, jawabanBenar: state.score, totalSoal: state.quizData.length,
+                nomorSoalDikerjakan: formattedLog, 
+                skor: finalScore
+            };
+            try {
+                await fetch(webAppURL, {
+                    method: 'POST', mode: 'no-cors', cache: 'no-cache',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data), redirect: 'follow'
+                });
+                allElements.submitStatus.textContent = 'Skor berhasil disimpan!';
+                allElements.submitStatus.style.color = 'green';
+                allElements.submissionForm.style.display = 'none';
+            } catch (error) {
+                allElements.submitStatus.textContent = 'Gagal mengirim. Coba lagi.';
+                allElements.submitStatus.style.color = 'red';
+                allElements.submitButton.disabled = false;
+            }
+        }
 
         // --- INISIALISASI ---
         document.addEventListener('DOMContentLoaded', async () => {
