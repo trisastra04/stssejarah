@@ -19,7 +19,12 @@
 </head>
 <body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
 
-    <div id="app-container" class="bg-white w-full max-w-6xl rounded-2xl shadow-lg p-6 md:p-8 transition-all duration-300 relative">
+    <!-- Tombol Reset Aplikasi di Pojok Halaman -->
+    <button id="reset-button" class="fixed top-4 left-4 text-xs text-slate-400 hover:text-red-600 hover:underline transition-colors z-50">
+        Reset Aplikasi
+    </button>
+
+    <div id="app-container" class="bg-white w-full max-w-6xl rounded-2xl shadow-lg p-6 md:p-8 transition-all duration-300">
 
         <!-- Tampilan Login -->
         <div id="login-screen">
@@ -49,9 +54,61 @@
                 <button id="start-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 mt-8 text-lg disabled:bg-slate-400 disabled:cursor-not-allowed">
                     Gaskeun
                 </button>
+                <p id="attempt-error" class="text-red-600 text-center text-sm mt-2 h-4"></p>
             </div>
         </div>
         
+        <!-- Pop Up Peraturan -->
+        <div id="rules-modal" class="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center hidden z-50 p-8 rounded-2xl">
+            <div class="text-center max-w-lg">
+                <h2 class="text-3xl font-bold text-slate-800">Peraturan Ujian</h2>
+                <div class="my-6 text-left bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-md">
+                    <p class="font-bold text-lg text-center">Peringatan Penting:</p>
+                    <p class="mt-2">Jika Anda beralih ke tab lain, membuka aplikasi lain, atau meninggalkan halaman ujian ini dengan alasan apa pun, pengerjaan soal akan <strong class="uppercase">OTOMATIS DIHENTIKAN</strong> dan skor akhir Anda akan langsung disimpan.</p>
+                </div>
+                <p class="text-slate-600">Pastikan Anda fokus mengerjakan ujian dan tidak membuka halaman lain.</p>
+                <button id="agree-button" class="w-full max-w-xs mx-auto mt-8 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 text-lg">
+                    Saya Mengerti dan Setuju
+                </button>
+            </div>
+        </div>
+
+        <!-- Pop Up Reset -->
+        <div id="reset-modal" class="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center hidden z-50 p-8 rounded-2xl">
+            <div class="text-center max-w-lg">
+                <h2 class="text-3xl font-bold text-slate-800">Reset Aplikasi</h2>
+                <p class="mt-4 text-slate-600">Apakah Anda yakin ingin mereset semua data percobaan ujian di browser ini? Tindakan ini akan mengizinkan semua murid untuk mengambil ujian kembali dari perangkat ini.</p>
+                <div class="mt-8 flex justify-center gap-4">
+                     <button id="cancel-reset-button" class="bg-slate-200 text-slate-800 font-bold py-3 px-6 rounded-lg hover:bg-slate-300">
+                        Batal
+                    </button>
+                    <button id="confirm-reset-button" class="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700">
+                        Ya, Reset Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PENAMBAHAN: Pop Up Password Reset -->
+        <div id="password-reset-modal" class="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center hidden z-50 p-8 rounded-2xl">
+            <div class="text-center max-w-lg">
+                <h2 class="text-3xl font-bold text-slate-800">Masukkan Password</h2>
+                <p class="mt-4 text-slate-600">Untuk melanjutkan, silakan masukkan password admin.</p>
+                <div class="my-6">
+                    <input type="password" id="password-reset-input" placeholder="Password Admin" class="mt-1 block w-full max-w-xs mx-auto rounded-md border-slate-300 shadow-sm p-3">
+                    <p id="password-reset-error" class="text-red-600 text-center text-sm mt-2 h-4"></p>
+                </div>
+                <div class="mt-8 flex justify-center gap-4">
+                    <button id="cancel-password-reset-button" class="bg-slate-200 text-slate-800 font-bold py-3 px-6 rounded-lg hover:bg-slate-300">
+                        Batal
+                    </button>
+                    <button id="confirm-password-reset-button" class="bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700">
+                        Konfirmasi Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Tampilan Loading Soal -->
         <div id="loading-screen" class="hidden text-center py-10">
             <p class="text-slate-600">Memuat soal...</p>
@@ -134,6 +191,7 @@
         };
         const studentSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=463026985&single=true&output=csv';
         const accessCodeSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=361839719&single=true&output=csv';
+        const adminPasswordSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=2110472329&single=true&output=csv';
         const webAppURL = 'https://script.google.com/macros/s/AKfycbyND_LB9BszBs1j3TH_SeK3YMcrGKWszlIKbqxXDBxa0fLDoU5mRjKB5tHJyQhJAAOu/exec';
         
         // --- ELEMEN DOM ---
@@ -150,52 +208,45 @@
             finalClass: document.getElementById('final-class'), submitButton: document.getElementById('submit-button'),
             submitStatus: document.getElementById('submit-status'), submissionForm: document.getElementById('submission-form'),
             studentNameDisplay: document.getElementById('student-name-display'), studentClassDisplay: document.getElementById('student-class-display'),
+            rulesModal: document.getElementById('rules-modal'), agreeButton: document.getElementById('agree-button'),
+            resetButton: document.getElementById('reset-button'), attemptError: document.getElementById('attempt-error'),
+            resetModal: document.getElementById('reset-modal'), cancelResetButton: document.getElementById('cancel-reset-button'),
+            confirmResetButton: document.getElementById('confirm-reset-button'),
+            passwordResetModal: document.getElementById('password-reset-modal'),
+            passwordResetInput: document.getElementById('password-reset-input'),
+            passwordResetError: document.getElementById('password-reset-error'),
+            confirmPasswordResetButton: document.getElementById('confirm-password-reset-button'),
+            cancelPasswordResetButton: document.getElementById('cancel-password-reset-button'),
         };
 
         // --- STATE APLIKASI ---
         let state = {
-            quizData: [], studentData: {}, accessCodeData: {}, selectedClass: '', selectedName: '',
+            quizData: [], studentData: {}, accessCodeData: {}, adminPasswords: [], selectedClass: '', selectedName: '',
             currentQuestionIndex: 0, score: 0, selectedAnswer: null, answeredQuestionsLog: [],
             timerInterval: null, timeLeft: 0, studentSessionId: null
         };
 
         // --- FUNGSI-FUNGSI ---
         function parseCSV(csvText) {
-            const rows = [];
-            let inQuotes = false;
-            let currentField = '';
-            let currentRow = [];
+            const rows = []; let inQuotes = false; let currentField = ''; let currentRow = [];
             csvText = csvText.trim();
             for (let i = 0; i < csvText.length; i++) {
-                const char = csvText[i];
-                const nextChar = csvText[i + 1];
+                const char = csvText[i]; const nextChar = csvText[i + 1];
                 if (inQuotes) {
-                    if (char === '"' && nextChar === '"') {
-                        currentField += '"'; i++;
-                    } else if (char === '"') {
-                        inQuotes = false;
-                    } else {
-                        currentField += char;
-                    }
+                    if (char === '"' && nextChar === '"') { currentField += '"'; i++; } 
+                    else if (char === '"') { inQuotes = false; } 
+                    else { currentField += char; }
                 } else {
-                    if (char === '"') {
-                        inQuotes = true;
-                    } else if (char === ',') {
-                        currentRow.push(currentField.trim()); currentField = '';
-                    } else if (char === '\n' || char === '\r') {
-                        currentRow.push(currentField.trim());
-                        rows.push(currentRow);
+                    if (char === '"') { inQuotes = true; } 
+                    else if (char === ',') { currentRow.push(currentField.trim()); currentField = ''; } 
+                    else if (char === '\n' || char === '\r') {
+                        currentRow.push(currentField.trim()); rows.push(currentRow);
                         currentRow = []; currentField = '';
                         if (char === '\r' && nextChar === '\n') { i++; }
-                    } else {
-                        currentField += char;
-                    }
+                    } else { currentField += char; }
                 }
             }
-            if (currentField || currentRow.length > 0) {
-                 currentRow.push(currentField.trim());
-                 rows.push(currentRow);
-            }
+            if (currentField || currentRow.length > 0) { currentRow.push(currentField.trim()); rows.push(currentRow); }
             return rows;
         }
 
@@ -229,6 +280,19 @@
                 state.accessCodeData = {};
                 headers.forEach((className, index) => { if (codeRow[index]) { state.accessCodeData[className] = codeRow[index]; } });
             } catch (error) { console.error(error); }
+        }
+
+        async function fetchAdminPasswords() {
+            try {
+                const response = await fetch(adminPasswordSheetURL);
+                if (!response.ok) throw new Error('Gagal memuat password admin.');
+                const csvText = await response.text();
+                const rows = parseCSV(csvText);
+                rows.shift(); // Hapus header
+                state.adminPasswords = rows.map(row => row[0]).filter(Boolean); // Ambil kolom A
+            } catch (error) {
+                console.error(error);
+            }
         }
 
         function populateClassDropdown(classes) {
@@ -269,7 +333,19 @@
             const name = allElements.nameDropdown.value;
             const code = allElements.accessCodeInput.value.trim();
             const correctCodeForClass = state.accessCodeData[className];
-            allElements.startButton.disabled = !(className && name && code === correctCodeForClass);
+            
+            allElements.attemptError.textContent = '';
+            allElements.startButton.disabled = true;
+
+            if (className && name && code === correctCodeForClass) {
+                const studentId = `${className} - ${name}`;
+                const attempts = parseInt(localStorage.getItem(studentId) || '0');
+                if (attempts >= 2) {
+                    allElements.attemptError.textContent = 'Anda sudah mencapai batas maksimal pengerjaan (2 kali).';
+                } else {
+                    allElements.startButton.disabled = false;
+                }
+            }
         }
 
         async function fetchQuizData(quizSheetURL) {
@@ -347,13 +423,19 @@
             }
         }
 
-        async function startQuiz() {
+        function startQuiz() {
             state.selectedClass = allElements.classDropdown.value; 
             state.selectedName = allElements.nameDropdown.value;
             state.studentSessionId = `${state.selectedClass} - ${state.selectedName}`;
-
             allElements.studentNameDisplay.textContent = state.selectedName;
             allElements.studentClassDisplay.textContent = state.selectedClass;
+            allElements.rulesModal.classList.remove('hidden');
+        }
+
+        async function proceedToExam() {
+            const studentId = state.studentSessionId;
+            const attempts = parseInt(localStorage.getItem(studentId) || '0');
+            localStorage.setItem(studentId, attempts + 1);
 
             let quizSheetURL = '';
             if (state.selectedClass.startsWith('Kelas XII')) quizSheetURL = quizURLs['Kelas XII'];
@@ -498,12 +580,42 @@
                 allElements.submitButton.disabled = false;
             }
         }
+        
+        function showResetModal() { allElements.resetModal.classList.remove('hidden'); }
+        function hideResetModal() { allElements.resetModal.classList.add('hidden'); }
+        
+        function requestResetPassword() {
+            hideResetModal();
+            allElements.passwordResetModal.classList.remove('hidden');
+        }
+
+        function hidePasswordResetModal() {
+            allElements.passwordResetModal.classList.add('hidden');
+            allElements.passwordResetInput.value = '';
+            allElements.passwordResetError.textContent = '';
+        }
+
+        function verifyAndReset() {
+            const enteredPassword = allElements.passwordResetInput.value;
+            const isValid = state.adminPasswords.includes(enteredPassword);
+
+            if (isValid) {
+                localStorage.clear();
+                hidePasswordResetModal();
+                location.reload();
+            } else {
+                allElements.passwordResetError.textContent = 'Password salah.';
+            }
+        }
+
 
         // --- INISIALISASI ---
         document.addEventListener('DOMContentLoaded', async () => {
             allElements.startButton.disabled = true;
             await fetchAccessCodes();
-            const classes = await fetchStudentData();
+            await fetchStudentData();
+            await fetchAdminPasswords();
+            const classes = Object.keys(state.studentData);
             if (classes) { populateClassDropdown(classes); }
         });
         
@@ -514,6 +626,15 @@
         allElements.nextButton.addEventListener('click', handleNextQuestion);
         allElements.retryButton.addEventListener('click', resetToLogin);
         allElements.submitButton.addEventListener('click', submitScore);
+        allElements.agreeButton.addEventListener('click', () => {
+            allElements.rulesModal.classList.add('hidden');
+            proceedToExam();
+        });
+        allElements.resetButton.addEventListener('click', showResetModal);
+        allElements.cancelResetButton.addEventListener('click', hideResetModal);
+        allElements.confirmResetButton.addEventListener('click', requestResetPassword);
+        allElements.cancelPasswordResetButton.addEventListener('click', hidePasswordResetModal);
+        allElements.confirmPasswordResetButton.addEventListener('click', verifyAndReset);
 
     </script>
 </body>
