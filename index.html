@@ -90,7 +90,7 @@
             </div>
         </div>
 
-        <!-- PENAMBAHAN: Pop Up Password Reset -->
+        <!-- Pop Up Password Reset -->
         <div id="password-reset-modal" class="absolute inset-0 bg-white bg-opacity-95 flex items-center justify-center hidden z-50 p-8 rounded-2xl">
             <div class="text-center max-w-lg">
                 <h2 class="text-3xl font-bold text-slate-800">Masukkan Password</h2>
@@ -184,7 +184,7 @@
         // --- AKHIR PENGATURAN FIREBASE ---
 
         // --- PENGATURAN UMUM ---
-        const QUIZ_DURATION_MINUTES = 60;
+        const QUIZ_DURATION_MINUTES = 45;
         const quizURLs = {
             'Kelas X': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=427248072&single=true&output=csv',
             'Kelas XI': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=0&single=true&output=csv',
@@ -416,10 +416,23 @@
                   .catch(error => console.error("Gagal update status: ", error));
             }
         }
+
+        // --- PENAMBAHAN: Fungsi untuk mencatat riwayat pindah tab ---
+        function logCheatingEvent() {
+            if (state.studentSessionId) {
+                db.collection("cheating_log").add({
+                    nama: state.selectedName,
+                    kelas: state.selectedClass,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    type: "Ulangan Utama"
+                }).catch(error => console.error("Gagal mencatat riwayat: ", error));
+            }
+        }
         
         function handleVisibilityChange() {
             if (document.hidden && !allElements.quizScreen.classList.contains('hidden')) {
                 updateStudentStatus({ status: "Beralih Tab", last_updated: firebase.firestore.FieldValue.serverTimestamp() });
+                logCheatingEvent(); // Panggil fungsi pencatatan
                 showResults(true);
             }
         }
