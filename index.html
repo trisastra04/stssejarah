@@ -11,7 +11,6 @@
     <style>
         body { 
             font-family: 'Inter', sans-serif;
-            /* PENAMBAHAN: Mencegah seleksi teks */
             -webkit-user-select: none; /* Safari */
             -ms-user-select: none; /* IE 10+ */
             user-select: none; /* Standar */
@@ -199,7 +198,7 @@
         const studentSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=463026985&single=true&output=csv';
         const accessCodeSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=361839719&single=true&output=csv';
         const adminPasswordSheetURL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQnP8COEuoPRN4A6QqHCayDqWfciL9F7CQTasp4S1m4M0JAmYdvJuDjg7D1dqlnnyiJdtuMxRFOjBPg/pub?gid=2110472329&single=true&output=csv';
-        const webAppURL = 'https://script.google.com/macros/s/AKfycbyND_LB9BszBs1j3TH_SeK3YMcrGKWszlIKbqxXDBxa0fLDoU5mRjKB5tHJyQhJAAOu/exec';
+        const webAppURL = 'https://script.google.com/macros/s/AKfycby6XV6ZMW2VjYo9ErEGiFM0hj78WIB2bktrRzeinZ8n1km4Dv9F_4C2luxNPzgZ3ZHS/exec';
         
         // --- ELEMEN DOM ---
         const allElements = {
@@ -295,8 +294,8 @@
                 if (!response.ok) throw new Error('Gagal memuat password admin.');
                 const csvText = await response.text();
                 const rows = parseCSV(csvText);
-                rows.shift(); // Hapus header
-                state.adminPasswords = rows.map(row => row[0]).filter(Boolean); // Ambil kolom A
+                rows.shift();
+                state.adminPasswords = rows.map(row => row[0]).filter(Boolean);
             } catch (error) {
                 console.error(error);
             }
@@ -582,7 +581,8 @@
             const data = {
                 nama: state.selectedName, kelas: state.selectedClass, jawabanBenar: state.score, totalSoal: state.quizData.length,
                 nomorSoalDikerjakan: formattedLog, 
-                skor: finalScore
+                skor: finalScore,
+                type: 'Utama' 
             };
             try {
                 await fetch(webAppURL, {
